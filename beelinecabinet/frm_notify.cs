@@ -151,8 +151,8 @@ namespace tpscabinet
                     PlaningDayUse = " (" + (tps_cabinet.TraffLeft / (DateTime.DaysInMonth(DateTime.Now.Year, DateTime.Now.Month) - DateTime.Now.Day)).ToString("f2") + " Мб/день)";
 
                 lbl_Info.Text += "Остаток: " + tps_cabinet.TraffLeft + " Мб" + PlaningDayUse + "\r\n";
-                lbl_Info.Text += "Баланс: $ " + tps_cabinet.Balance + " / Курс: " + tps_cabinet.Kurs.ToString("f2") + "\r\n";
-                lbl_Info.Text += "К оплате (1-го): " + ((tps_cabinet.AbonentPlata - tps_cabinet.Balance) * tps_cabinet.Kurs).ToString("f2") + "\r\n";
+                lbl_Info.Text += "Баланс: $ " + tps_cabinet.Balance + "\r\n";// +" / Курс: " + tps_cabinet.Kurs.ToString("f2") + "\r\n";
+                lbl_Info.Text += "К оплате (1-го): $" + (tps_cabinet.AbonentPlata - tps_cabinet.Balance).ToString("f2") + "\r\n";
                 //AppIcon.Text += "CabinetID = " + tps_cabinet.CabinetID + "\r\n";
                 ///AppIcon.Text += "AbonentPlata = " + tps_cabinet.AbonentPlata + "\r\n";
             }

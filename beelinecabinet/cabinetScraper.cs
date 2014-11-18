@@ -62,6 +62,8 @@ namespace tpscabinet
         public float AbonentPlata;
         public float Kurs;
         private string CabinetHTML;
+        private string PacketsHTML;
+        private string Plan;
 
         public CabinetScraper()
         {
@@ -75,6 +77,8 @@ namespace tpscabinet
             AbonentPlata = 0;
             Kurs = 0;
             CabinetHTML = "";
+            PacketsHTML = "";
+            Plan = "";
         }
 
         public void ClearErrors()
@@ -94,34 +98,50 @@ namespace tpscabinet
                 post_vars.Add("submit", "");
                 post_vars.Add("submit", "Войти");
                 post_vars.Add("AuthData.RememberMe", "false");//false
-                post_vars.Add("AuthData.ReturnUrl", "");
+                post_vars.Add("AuthData.ReturnUrl", "/RU/cabinet/internet/info");
                 post_vars.Add("AuthData.Login", this.Login);
                 post_vars.Add("AuthData.Password", this.Password);
-                this.CabinetHTML = UTF8Encoding.UTF8.GetString(wc.UploadValues("https://clientsnew.beeline.uz/RU/Account/LogOn?ReturnUrl=%2f", "POST", post_vars));
-                System.IO.File.WriteAllText("out" + DateTime.Now.Ticks + ".html", this.CabinetHTML, Encoding.UTF8);
-
-                /*if (String.IsNullOrEmpty(this.CabinetHTML))
+                this.CabinetHTML = UTF8Encoding.UTF8.GetString(wc.UploadValues("https://clientsnew.beeline.uz/RU/Account/LogOn?ReturnUrl=/RU/cabinet/internet/info", "POST", post_vars));
+                this.PacketsHTML = UTF8Encoding.UTF8.GetString(wc.DownloadData("https://clientsnew.beeline.uz/ru/cabinet/internet/trafficpacks"));
+#if DEBUG
+                System.IO.File.WriteAllText("main" + DateTime.Now.Ticks + ".html", this.CabinetHTML, Encoding.UTF8);
+                System.IO.File.WriteAllText("packet" + DateTime.Now.Ticks + ".html", this.PacketsHTML, Encoding.UTF8);
+#endif
+                if (String.IsNullOrEmpty(this.CabinetHTML))
                 {
                     this.LastError = new Error("Данные не получены", false);
                     return;
                 }
-                if (this.CabinetHTML.Contains("Вход в персональный кабинет"))
+                if (this.CabinetHTML.Contains("Пользователь с таким логином не существует"))
                 {
                     this.LastError = new Error("Логин\\пароль не верны", true);
                     return;
                 }
                 if (!String.IsNullOrEmpty(this.CabinetHTML))
                 {
-                    float.TryParse(GetCabinetVal(@"traffic\s*:\s*'Использовано',\s*value:\s*(\d+(?:\.\d{1,2})?)\s*}"), out this.TraffUsed);
-                    float.TryParse(GetCabinetVal(@"traffic\s*:\s*'Осталось',\s*value:\s*(-?\d+(?:\.\d{1,2})?)\s*}"), out this.TraffLeft);
-                    if (TraffLeft < 0) TraffLeft = 0;
-                    float.TryParse(GetCabinetVal(@"<strong\s+class=""balance""\s+data-accid=""\d+"">\s*(-?\d+(?:\.\d{1,2})?)\s*</strong>"), out this.Balance);
-                    int.TryParse(GetCabinetVal(@"/pppoe_session\?id=(\d+)"), out this.CabinetID);
-                    float.TryParse(GetCabinetVal(@"<th>Статус</th>[\s\S]+?<td>\s*\$(\d+(?:\.\d{1,2})?)\s*</td>"), out this.AbonentPlata);
-                    float.TryParse(GetCabinetVal(@"<p>1\s*доллар\s*США\s*=\s*(\d+(?:\.\d{1,2})?)"), out this.Kurs);
+                    //// Traff Left
+                    float.TryParse(GetCabinetVal(@"Остаток трафика\s*<span[\s\S]+?>(-?\d+(?:\.\d{1,2})?)</span>"), out this.TraffLeft);
+                    //// Traff Used
+                    if (!String.IsNullOrEmpty(this.PacketsHTML))
+                    {
+                        this.Plan = GetCabinetVal(@"Тарифный план:\s*([\s\S]+?)</div>").Trim();
+                        if (this.Plan != "")
+                        {
+                            float TotalTraff = 0;
+                            float.TryParse(this.FindTraffLeftInActivePlan(), out TotalTraff);
+                            this.TraffUsed = TotalTraff - this.TraffLeft;
+                        }
+                    }
+                    if (this.TraffLeft < 0) this.TraffLeft = 0;
+                    if (this.TraffUsed < 0) this.TraffUsed = 0;
+
+                    float.TryParse(GetCabinetVal(@"<span\s+id=""BalanceSpan""[\s\S]+?>(-?\d+(?:\.\d{1,2})?)</span>"), out this.Balance);
+                    int.TryParse(GetCabinetVal(@"class=""icn""\s*>\s*(\d+)\s*</td>"), out this.CabinetID);
+                    float.TryParse(GetCabinetVal(@"Абонентская плата:\s*(\d+(?:\.\d{1,2})?)"), out this.AbonentPlata);
+                    this.Kurs = -1;
                     this.LastError = null;
                     this.LastUpdate = DateTime.Now;
-                }*/
+                }
             }
         }
 
@@ -133,5 +153,15 @@ namespace tpscabinet
             else
                 return "";
         }
+        
+        private string FindTraffLeftInActivePlan()
+        {
+            Match PlanValMatch = Regex.Match(this.PacketsHTML, this.Plan + @"[\s\S]+?</td>[\s\S]+?</td>[\s\S]+?</td>[\s\S]+?<div class=""aservice"">\s*(\d+(?:\.\d{1,2})?)\s*</div>", RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            if (PlanValMatch.Success)
+                return PlanValMatch.Groups[1].Value;
+            else
+                return "";
+        }
+
     }
 }

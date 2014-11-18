@@ -159,7 +159,8 @@ namespace tpscabinet
             {
                 try
                 {
-                    Program.invokerControl.BeginInvoke(new delegate_ShowNotify(ShowNotify), new object[] { "Ошибка: " + ex.Message, false });
+                    if (Program.DebugMode)
+                        Program.invokerControl.BeginInvoke(new delegate_ShowNotify(ShowNotify), new object[] { "Ошибка: " + ex.Message, false });
                 }
                 catch { }
             }
